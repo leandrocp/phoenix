@@ -27,7 +27,14 @@ defmodule Phoenix.Transports.WebSocket do
       %{params: params} = conn ->
         keys = Keyword.get(opts, :connect_info, [])
         connect_info = Transport.connect_info(conn, endpoint, keys)
-        config = %{endpoint: endpoint, transport: :websocket, options: opts, params: params, connect_info: connect_info}
+
+        config = %{
+          endpoint: endpoint,
+          transport: :websocket,
+          options: opts,
+          params: params,
+          connect_info: connect_info
+        }
 
         case handler.connect(config) do
           {:ok, state} -> {:ok, conn, state}

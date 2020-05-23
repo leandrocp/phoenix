@@ -12,7 +12,7 @@ defmodule Mix.Tasks.Compile.Phoenix do
 
     case touch() do
       [] -> {:noop, []}
-      _  -> {:ok, []}
+      _ -> {:ok, []}
     end
   end
 
@@ -25,16 +25,17 @@ defmodule Mix.Tasks.Compile.Phoenix do
     |> Stream.filter(&(&1 == :ok))
     |> Enum.to_list()
   end
+
   defp touch_if_exists(path) do
     :file.change_time(path, :calendar.local_time())
   end
 
   defp modules_for_recompilation(modules) do
-    Stream.filter modules, fn mod ->
+    Stream.filter(modules, fn mod ->
       Code.ensure_loaded?(mod) and
         function_exported?(mod, :__phoenix_recompile__?, 0) and
         mod.__phoenix_recompile__?()
-    end
+    end)
   end
 
   defp modules_to_file_paths(modules) do

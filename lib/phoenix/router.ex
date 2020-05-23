@@ -6,12 +6,15 @@ defmodule Phoenix.Router do
     defexception plug_status: 404, message: "no route found", conn: nil, router: nil
 
     def exception(opts) do
-      conn   = Keyword.fetch!(opts, :conn)
+      conn = Keyword.fetch!(opts, :conn)
       router = Keyword.fetch!(opts, :router)
-      path   = "/" <> Enum.join(conn.path_info, "/")
+      path = "/" <> Enum.join(conn.path_info, "/")
 
-      %NoRouteError{message: "no route found for #{conn.method} #{path} (#{inspect router})",
-                    conn: conn, router: router}
+      %NoRouteError{
+        message: "no route found for #{conn.method} #{path} (#{inspect(router)})",
+        conn: conn,
+        router: router
+      }
     end
   end
 
@@ -265,7 +268,7 @@ defmodule Phoenix.Router do
     quote do
       @helpers_moduledoc Keyword.get(unquote(opts), :helpers_moduledoc, true)
 
-      Module.register_attribute __MODULE__, :phoenix_routes, accumulate: true
+      Module.register_attribute(__MODULE__, :phoenix_routes, accumulate: true)
       @phoenix_forwards %{}
 
       import Phoenix.Router
@@ -294,30 +297,52 @@ defmodule Phoenix.Router do
         opts = resource.route
 
         if resource.singleton do
-          Enum.each resource.actions, fn
-            :show    -> get    path,            ctrl, :show, opts
-            :new     -> get    path <> "/new",  ctrl, :new, opts
-            :edit    -> get    path <> "/edit", ctrl, :edit, opts
-            :create  -> post   path,            ctrl, :create, opts
-            :delete  -> delete path,            ctrl, :delete, opts
-            :update  ->
+          Enum.each(resource.actions, fn
+            :show ->
+              get path, ctrl, :show, opts
+
+            :new ->
+              get path <> "/new", ctrl, :new, opts
+
+            :edit ->
+              get path <> "/edit", ctrl, :edit, opts
+
+            :create ->
+              post path, ctrl, :create, opts
+
+            :delete ->
+              delete path, ctrl, :delete, opts
+
+            :update ->
               patch path, ctrl, :update, opts
-              put   path, ctrl, :update, Keyword.put(opts, :as, nil)
-          end
+              put path, ctrl, :update, Keyword.put(opts, :as, nil)
+          end)
         else
           param = resource.param
 
-          Enum.each resource.actions, fn
-            :index   -> get    path,                             ctrl, :index, opts
-            :show    -> get    path <> "/:" <> param,            ctrl, :show, opts
-            :new     -> get    path <> "/new",                   ctrl, :new, opts
-            :edit    -> get    path <> "/:" <> param <> "/edit", ctrl, :edit, opts
-            :create  -> post   path,                             ctrl, :create, opts
-            :delete  -> delete path <> "/:" <> param,            ctrl, :delete, opts
-            :update  ->
+          Enum.each(resource.actions, fn
+            :index ->
+              get path, ctrl, :index, opts
+
+            :show ->
+              get path <> "/:" <> param, ctrl, :show, opts
+
+            :new ->
+              get path <> "/new", ctrl, :new, opts
+
+            :edit ->
+              get path <> "/:" <> param <> "/edit", ctrl, :edit, opts
+
+            :create ->
+              post path, ctrl, :create, opts
+
+            :delete ->
+              delete path <> "/:" <> param, ctrl, :delete, opts
+
+            :update ->
               patch path <> "/:" <> param, ctrl, :update, opts
-              put   path <> "/:" <> param, ctrl, :update, Keyword.put(opts, :as, nil)
-          end
+              put path <> "/:" <> param, ctrl, :update, Keyword.put(opts, :as, nil)
+          end)
         end
       end
     end
@@ -335,18 +360,26 @@ defmodule Phoenix.Router do
       _ -> Enum.reduce(pipes, conn, fn pipe, acc -> apply(router, pipe, [acc, []]) end)
     end
   end
+
   def __call__(%{private: %{phoenix_bypass: :all}} = conn, {metadata, prepare, _, _}) do
     prepare.(conn, metadata)
   end
+
   def __call__(conn, {metadata, prepare, pipeline, {plug, opts}}) do
     conn = prepare.(conn, metadata)
     start = System.monotonic_time()
     metadata = %{metadata | conn: conn}
-    :telemetry.execute([:phoenix, :router_dispatch, :start], %{system_time: System.system_time()}, metadata)
+
+    :telemetry.execute(
+      [:phoenix, :router_dispatch, :start],
+      %{system_time: System.system_time()},
+      metadata
+    )
 
     case pipeline.(conn) do
       %Plug.Conn{halted: true} = halted_conn ->
         halted_conn
+
       %Plug.Conn{} = piped_conn ->
         try do
           plug.call(piped_conn, plug.init(opts))
@@ -354,7 +387,13 @@ defmodule Phoenix.Router do
           conn ->
             duration = System.monotonic_time() - start
             metadata = %{metadata | conn: conn}
-            :telemetry.execute([:phoenix, :router_dispatch, :stop], %{duration: duration}, metadata)
+
+            :telemetry.execute(
+              [:phoenix, :router_dispatch, :stop],
+              %{duration: duration},
+              metadata
+            )
+
             conn
         rescue
           e in Plug.Conn.WrapperError ->
@@ -395,7 +434,7 @@ defmodule Phoenix.Router do
             Enum.map(path_info, &URI.decode/1)
           rescue
             ArgumentError ->
-              raise MalformedURIError, "malformed URI path: #{inspect conn.request_path}"
+              raise MalformedURIError, "malformed URI path: #{inspect(conn.request_path)}"
           end
 
         case __match_route__(method, decoded, host) do
@@ -404,19 +443,19 @@ defmodule Phoenix.Router do
         end
       end
 
-      defoverridable [init: 1, call: 2]
+      defoverridable init: 1, call: 2
     end
   end
 
   @anno (if :erlang.system_info(:otp_release) >= '19' do
-    [generated: true]
-  else
-    [line: -1]
-  end)
+           [generated: true]
+         else
+           [line: -1]
+         end)
 
   @doc false
   defmacro __before_compile__(env) do
-    routes = env.module |> Module.get_attribute(:phoenix_routes) |> Enum.reverse
+    routes = env.module |> Module.get_attribute(:phoenix_routes) |> Enum.reverse()
     routes_with_exprs = Enum.map(routes, &{&1, Route.exprs(&1)})
 
     helpers_moduledoc = Module.get_attribute(env.module, :helpers_moduledoc)
@@ -441,7 +480,7 @@ defmodule Phoenix.Router do
 
     quote do
       @doc false
-      def __routes__,  do: unquote(Macro.escape(routes))
+      def __routes__, do: unquote(Macro.escape(routes))
 
       @doc false
       def __checks__, do: unquote({:__block__, [], Map.keys(checks)})
@@ -494,8 +533,7 @@ defmodule Phoenix.Router do
         def __match_route__(unquote(verb_match), unquote(path), unquote(host)) do
           {unquote(build_metadata(route, path_params)),
            fn var!(conn, :conn), %{path_params: var!(path_params, :conn)} -> unquote(prepare) end,
-           &unquote(Macro.var(pipe_name, __MODULE__))/1,
-           unquote(dispatch)}
+           &(unquote(Macro.var(pipe_name, __MODULE__)) / 1), unquote(dispatch)}
         end
       end
 
@@ -530,7 +568,7 @@ defmodule Phoenix.Router do
   end
 
   defp build_pipes(name, pipe_through) do
-    plugs = pipe_through |> Enum.reverse |> Enum.map(&{&1, [], true})
+    plugs = pipe_through |> Enum.reverse() |> Enum.map(&{&1, [], true})
     {conn, body} = Plug.Builder.compile(__ENV__, plugs, init_mode: Phoenix.plug_init_mode())
 
     quote do
@@ -590,15 +628,15 @@ defmodule Phoenix.Router do
   defp add_route(kind, verb, path, plug, plug_opts, options) do
     quote do
       @phoenix_routes Scope.route(
-        __ENV__.line,
-        __ENV__.module,
-        unquote(kind),
-        unquote(verb),
-        unquote(path),
-        unquote(plug),
-        unquote(plug_opts),
-        unquote(options)
-      )
+                        __ENV__.line,
+                        __ENV__.module,
+                        unquote(kind),
+                        unquote(verb),
+                        unquote(path),
+                        unquote(plug),
+                        unquote(plug_opts),
+                        unquote(options)
+                      )
     end
   end
 
@@ -635,8 +673,9 @@ defmodule Phoenix.Router do
     compiler =
       quote unquote: false do
         Scope.pipeline(__MODULE__, plug)
-        {conn, body} = Plug.Builder.compile(__ENV__, @phoenix_pipeline,
-          init_mode: Phoenix.plug_init_mode())
+
+        {conn, body} =
+          Plug.Builder.compile(__ENV__, @phoenix_pipeline, init_mode: Phoenix.plug_init_mode())
 
         def unquote(plug)(unquote(conn), _) do
           try do
@@ -649,6 +688,7 @@ defmodule Phoenix.Router do
               Plug.Conn.WrapperError.reraise(unquote(conn), :error, reason, __STACKTRACE__)
           end
         end
+
         @phoenix_pipeline nil
       end
 
@@ -672,7 +712,7 @@ defmodule Phoenix.Router do
 
     quote do
       if pipeline = @phoenix_pipeline do
-        @phoenix_pipeline [{unquote(plug), unquote(opts), true}|pipeline]
+        @phoenix_pipeline [{unquote(plug), unquote(opts), true} | pipeline]
       else
         raise "cannot define plug at the router level, plug must be defined inside a pipeline"
       end
@@ -771,32 +811,32 @@ defmodule Phoenix.Router do
 
   """
   defmacro resources(path, controller, opts, do: nested_context) do
-    add_resources path, controller, opts, do: nested_context
+    add_resources(path, controller, opts, do: nested_context)
   end
 
   @doc """
   See `resources/4`.
   """
   defmacro resources(path, controller, do: nested_context) do
-    add_resources path, controller, [], do: nested_context
+    add_resources(path, controller, [], do: nested_context)
   end
 
   defmacro resources(path, controller, opts) do
-    add_resources path, controller, opts, do: nil
+    add_resources(path, controller, opts, do: nil)
   end
 
   @doc """
   See `resources/4`.
   """
   defmacro resources(path, controller) do
-    add_resources path, controller, [], do: nil
+    add_resources(path, controller, [], do: nil)
   end
 
   defp add_resources(path, controller, options, do: context) do
     scope =
       if context do
         quote do
-          scope resource.member, do: unquote(context)
+          scope(resource.member, do: unquote(context))
         end
       end
 
@@ -860,13 +900,16 @@ defmodule Phoenix.Router do
 
   """
   defmacro scope(path, options, do: context) do
-    options = quote do
-      path = unquote(path)
-      case unquote(options) do
-        alias when is_atom(alias) -> [path: path, alias: alias]
-        options when is_list(options) -> Keyword.put(options, :path, path)
+    options =
+      quote do
+        path = unquote(path)
+
+        case unquote(options) do
+          alias when is_atom(alias) -> [path: path, alias: alias]
+          options when is_list(options) -> Keyword.put(options, :path, path)
+        end
       end
-    end
+
     do_scope(options, context)
   end
 
@@ -887,17 +930,20 @@ defmodule Phoenix.Router do
 
   """
   defmacro scope(path, alias, options, do: context) do
-    options = quote do
-      unquote(options)
-      |> Keyword.put(:path, unquote(path))
-      |> Keyword.put(:alias, unquote(alias))
-    end
+    options =
+      quote do
+        unquote(options)
+        |> Keyword.put(:path, unquote(path))
+        |> Keyword.put(:alias, unquote(alias))
+      end
+
     do_scope(options, context)
   end
 
   defp do_scope(options, context) do
     quote do
       Scope.push(__MODULE__, unquote(options))
+
       try do
         unquote(context)
       after

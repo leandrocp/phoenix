@@ -122,9 +122,9 @@ defmodule Phoenix.Presence do
   original presence data.
   """
 
-  @type presences :: %{String.t => %{metas: [map()]}}
-  @type presence :: %{key: String.t, meta: map()}
-  @type topic :: String.t
+  @type presences :: %{String.t() => %{metas: [map()]}}
+  @type presence :: %{key: String.t(), meta: map()}
+  @type topic :: String.t()
 
   @doc """
   Track a channel's process as a presence.
@@ -145,28 +145,28 @@ defmodule Phoenix.Presence do
       end
 
   """
-  @callback track(socket :: Phoenix.Socket.t, key :: String.t, meta :: map()) ::
-    {:ok, ref :: binary()} |
-    {:error, reason :: term()}
+  @callback track(socket :: Phoenix.Socket.t(), key :: String.t(), meta :: map()) ::
+              {:ok, ref :: binary()}
+              | {:error, reason :: term()}
 
   @doc """
   Track an arbitary process as a presence.
 
   Same with `track/3`, except track any process by `topic` and `key`.
   """
-  @callback track(pid, topic, key :: String.t, meta :: map()) ::
-    {:ok, ref :: binary()} |
-    {:error, reason :: term()}
+  @callback track(pid, topic, key :: String.t(), meta :: map()) ::
+              {:ok, ref :: binary()}
+              | {:error, reason :: term()}
 
   @doc """
   Stop tracking a channel's process.
   """
-  @callback untrack(socket :: Phoenix.Socket.t, key :: String.t) :: :ok
+  @callback untrack(socket :: Phoenix.Socket.t(), key :: String.t()) :: :ok
 
   @doc """
   Stop tracking a process.
   """
-  @callback untrack(pid, topic, key :: String.t) :: :ok
+  @callback untrack(pid, topic, key :: String.t()) :: :ok
 
   @doc """
   Update a channel presence's metadata.
@@ -174,18 +174,22 @@ defmodule Phoenix.Presence do
   Replace a presence's metadata by passing a new map or a function that takes
   the current map and returns a new one.
   """
-  @callback update(socket :: Phoenix.Socket.t, key :: String.t, meta :: map() | (map() -> map())) ::
-    {:ok, ref :: binary()} |
-    {:error, reason :: term()}
+  @callback update(
+              socket :: Phoenix.Socket.t(),
+              key :: String.t(),
+              meta :: map() | (map() -> map())
+            ) ::
+              {:ok, ref :: binary()}
+              | {:error, reason :: term()}
 
   @doc """
   Update a process presence's metadata.
 
   Same as `update/3`, but with an arbitary process.
   """
-  @callback update(pid, topic, key :: String.t, meta :: map() | (map() -> map())) ::
-    {:ok, ref :: binary()} |
-    {:error, reason :: term()}
+  @callback update(pid, topic, key :: String.t(), meta :: map() | (map() -> map())) ::
+              {:ok, ref :: binary()}
+              | {:error, reason :: term()}
 
   @doc """
   Returns presences for a socket/topic.
@@ -213,7 +217,7 @@ defmodule Phoenix.Presence do
   a `:phx_ref_prev` key will be present containing the previous
   `:phx_ref` value.
   """
-  @callback list(Phoenix.Socket.t | topic) :: presences
+  @callback list(Phoenix.Socket.t() | topic) :: presences
 
   @doc """
   Returns the map of presence metadata for a socket/topic-key pair.
@@ -231,7 +235,7 @@ defmodule Phoenix.Presence do
   Like `c:list/2`, the presence metadata is passed to the `fetch`
   callback of your presence module to fetch any additional information.
   """
-  @callback get_by_key(Phoenix.Socket.t | topic, key :: String.t) :: presences
+  @callback get_by_key(Phoenix.Socket.t() | topic, key :: String.t()) :: presences
 
   @doc """
   Extend presence information with additional data.
@@ -291,6 +295,7 @@ defmodule Phoenix.Presence do
       def track(%Phoenix.Socket{} = socket, key, meta) do
         track(socket.channel_pid, socket.topic, key, meta)
       end
+
       def track(pid, topic, key, meta) do
         Phoenix.Tracker.track(__MODULE__, pid, topic, key, meta)
       end
@@ -298,6 +303,7 @@ defmodule Phoenix.Presence do
       def untrack(%Phoenix.Socket{} = socket, key) do
         untrack(socket.channel_pid, socket.topic, key)
       end
+
       def untrack(pid, topic, key) do
         Phoenix.Tracker.untrack(__MODULE__, pid, topic, key)
       end
@@ -305,6 +311,7 @@ defmodule Phoenix.Presence do
       def update(%Phoenix.Socket{} = socket, key, meta) do
         update(socket.channel_pid, socket.topic, key, meta)
       end
+
       def update(pid, topic, key, meta) do
         Phoenix.Tracker.update(__MODULE__, pid, topic, key, meta)
       end
@@ -386,8 +393,10 @@ defmodule Phoenix.Presence do
     string_key = to_string(key)
 
     case Phoenix.Tracker.get_by_key(module, topic, key) do
-      [] -> []
-      [_|_] = pid_metas ->
+      [] ->
+        []
+
+      [_ | _] = pid_metas ->
         metas = Enum.map(pid_metas, fn {_pid, meta} -> meta end)
         %{^string_key => fetched_metas} = module.fetch(topic, %{string_key => %{metas: metas}})
         fetched_metas

@@ -113,7 +113,10 @@ defmodule Phoenix.Integration.WebsocketClient do
     {:close, <<>>, "done"}
   end
 
-  defp join_ref_for(%{topic: topic, event: "phx_join"}, %{topics: topics, join_ref: join_ref} = state) do
+  defp join_ref_for(
+         %{topic: topic, event: "phx_join"},
+         %{topics: topics, join_ref: join_ref} = state
+       ) do
     topics = Map.put(topics, topic, join_ref)
     {join_ref, %{state | topics: topics, join_ref: join_ref + 1}}
   end

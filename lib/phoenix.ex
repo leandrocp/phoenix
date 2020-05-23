@@ -92,14 +92,14 @@ defmodule Phoenix do
         true
 
       configured_lib && not Code.ensure_loaded?(configured_lib) ->
-        IO.warn """
+        IO.warn("""
         found #{inspect(configured_lib)} in your application configuration
         for Phoenix JSON encoding, but module #{inspect(configured_lib)} is not available.
         Ensure #{inspect(configured_lib)} is listed as a dependency in mix.exs.
-        """
+        """)
 
       true ->
-        IO.warn """
+        IO.warn("""
         Phoenix now requires you to explicitly list which engine to use
         for Phoenix JSON encoding. We recommend everyone to upgrade to
         Jason by setting in your config/config.exs:
@@ -112,7 +112,7 @@ defmodule Phoenix do
         your config/config.exs:
 
             config :phoenix, :json_library, Poison
-        """
+        """)
     end
   end
 end

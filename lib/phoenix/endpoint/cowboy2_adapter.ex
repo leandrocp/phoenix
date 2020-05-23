@@ -66,7 +66,7 @@ defmodule Phoenix.Endpoint.Cowboy2Adapter do
 
     {refs, child_specs} = Enum.unzip(refs_and_specs)
 
-    if drainer = (refs != [] && Keyword.get(config, :drainer, [])) do
+    if drainer = refs != [] && Keyword.get(config, :drainer, []) do
       child_specs ++ [{Plug.Cowboy.Drainer, Keyword.put_new(drainer, :refs, refs)}]
     else
       child_specs
@@ -96,7 +96,7 @@ defmodule Phoenix.Endpoint.Cowboy2Adapter do
         {:ok, pid}
 
       {:error, {:shutdown, {_, _, {{_, {:error, :eaddrinuse}}, _}}}} = error ->
-        Logger.error [info(scheme, endpoint, ref), " failed, port already in use"]
+        Logger.error([info(scheme, endpoint, ref), " failed, port already in use"])
         error
 
       {:error, _} = error ->
@@ -106,7 +106,7 @@ defmodule Phoenix.Endpoint.Cowboy2Adapter do
 
   defp info(scheme, endpoint, ref) do
     server = "cowboy #{Application.spec(:cowboy)[:vsn]}"
-    "Running #{inspect endpoint} with #{server} at #{bound_address(scheme, ref)}"
+    "Running #{inspect(endpoint)} with #{server} at #{bound_address(scheme, ref)}"
   end
 
   defp bound_address(scheme, ref) do

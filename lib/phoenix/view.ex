@@ -162,7 +162,7 @@ defmodule Phoenix.View do
       end
 
       def render(template, _assigns) when not is_binary(template) do
-        raise ArgumentError, "render/2 expects template to be a string, got: #{inspect template}"
+        raise ArgumentError, "render/2 expects template to be a string, got: #{inspect(template)}"
       end
 
       def render(template, assigns) when not is_map(assigns) do
@@ -174,12 +174,11 @@ defmodule Phoenix.View do
     end
   end
 
-
   @anno (if :erlang.system_info(:otp_release) >= '19' do
-    [generated: true]
-  else
-    [line: -1]
-  end)
+           [generated: true]
+         else
+           [line: -1]
+         end)
 
   @doc false
   defmacro __before_compile__(_env) do
@@ -384,6 +383,7 @@ defmodule Phoenix.View do
   def render_many(collection, view, template, assigns \\ %{}) do
     assigns = Map.new(assigns)
     resource_name = get_resource_name(assigns, view)
+
     Enum.map(collection, fn resource ->
       render(view, template, Map.put(assigns, resource_name, resource))
     end)
@@ -417,9 +417,10 @@ defmodule Phoenix.View do
   """
   def render_one(resource, view, template, assigns \\ %{})
   def render_one(nil, _view, _template, _assigns), do: nil
+
   def render_one(resource, view, template, assigns) do
     assigns = Map.new(assigns)
-    render view, template, assign_resource(assigns, view, resource)
+    render(view, template, assign_resource(assigns, view, resource))
   end
 
   @compile {:inline, [get_resource_name: 2]}
@@ -446,7 +447,7 @@ defmodule Phoenix.View do
   Renders the template and returns a string.
   """
   def render_to_string(module, template, assign) do
-    render_to_iodata(module, template, assign) |> IO.iodata_to_binary
+    render_to_iodata(module, template, assign) |> IO.iodata_to_binary()
   end
 
   defp encode(content, template) do
@@ -472,7 +473,9 @@ defmodule Phoenix.View do
         |> Module.concat()
       end
 
-    root_path = Path.join(root, path || Template.module_to_template_root(module, namespace, "View"))
+    root_path =
+      Path.join(root, path || Template.module_to_template_root(module, namespace, "View"))
+
     [root: root_path] ++ Keyword.take(opts, [:pattern, :template_engines])
   end
 end
